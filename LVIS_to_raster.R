@@ -3,14 +3,15 @@ library(data.table); library(dplyr); library(terra)
 ## SAMPLE LVIS .TXT FILES DOWNLOADED FROM:
 # https://nsidc.org/data/lvisf2/versions/1
 
-##  10x10m gridded points 
+##  10x10m gridded data 
 ## "LVISF2_ABoVE2019_0715_R2003_071843.txt"
 ## "LVISF2_ABoVE2019_0715_R2003_071996.txt"
 
 ## Convert text to spatial points
 ## Extract fields 
-## Aggregate to raster of desired spatial resolution using "maximum" focal function
+## Aggregate to raster of desired resolution using "maximum" focal function
 
+# Set parameters
 fields = c("RH95", "RH98") # Fields to extract
 res = 30 # Spatial resolution of output raster in meters
 proj = "EPSG:32610" # projection "WGS84: UTM Zone 10"
@@ -27,6 +28,9 @@ lvis.list = list.files(path = "_input",
                        pattern = ".txt$",
                        full.names = TRUE)
 
+
+## Process every text file in the list
+## Gridded raster output 
 for (file in lvis.list) {
   
   print(file)
@@ -45,7 +49,7 @@ for (file in lvis.list) {
     print(f)
     
     # strings for output raster name
-    folder = "raster/"
+    folder = "outputs/"
     file.out = gsub("_input/", "", file)
     file.out = gsub(".txt", ".tif", file.out)
     
@@ -54,4 +58,26 @@ for (file in lvis.list) {
       terra::aggregate(., fact = res/10, fun = "max", na.rm = TRUE)%>%
       writeRaster(.,  filename = paste0(folder, f , "_", file.out), overwrite=T) 
   }
+}
+
+## Buffer each point 5m to correspond with 10m sampling diameter
+## output shapefile of buffers with associated metadata and height information as attributes
+for (file in lvis.list) {
+  
+  print(file)
+  
+  df = fread(input = file, col.names = names, skip = 21)
+  df$TLON = df$TLON - 360
+  
+  # creat spatvector in desired projection
+  v = vect(df, geom = c('TLON', 'TLAT'), keepgeom = TRUE, crs = 'EPSG:4269') %>%
+    project(., proj) %>% 
+    terra::buffer(., 5)
+  
+  # strings for output raster name
+  folder = "outputs/"
+  file.out = gsub("_input/", "", file)
+  file.out = gsub(".txt", ".shp", file.out)
+  
+  writeVector(v, filename = paste0(folder, "_", file.out), overwrite=T)
 }
