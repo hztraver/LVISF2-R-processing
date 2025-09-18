@@ -42,7 +42,7 @@ for (file in lvis.list) {
   v = vect(df, geom = c('TLON', 'TLAT'), keepgeom = TRUE, crs = 'EPSG:4269') %>%
     project(., proj)
   # create a template raster for gridded points
-  r = rast(ext = ext(v), resolution = 10, crs = proj)
+  r = rast(ext = ext(v), resolution = res, crs = proj)
   
   for (f in fields) {
     
@@ -55,7 +55,7 @@ for (file in lvis.list) {
     
     # aggregate to desired resolution and write as a projected raster
     rast = rasterize(v, r, field = f) %>% 
-      terra::aggregate(., fact = res/10, fun = "max", na.rm = TRUE)%>%
+      terra::aggregate(., fact = res/10, fun = "max", na.rm = TRUE) %>%
       writeRaster(.,  filename = paste0(folder, f , "_", file.out), overwrite=T) 
   }
 }
@@ -81,3 +81,4 @@ for (file in lvis.list) {
   
   writeVector(v, filename = paste0(folder, "_", file.out), overwrite=T)
 }
+
